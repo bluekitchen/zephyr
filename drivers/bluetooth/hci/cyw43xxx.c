@@ -28,6 +28,9 @@ LOG_MODULE_REGISTER(cyw43xxx_driver);
 
 #define DT_DRV_COMPAT infineon_cyw43xxx_bt_hci
 
+/* BT time for power off */
+#define BT_POWER_OFF_SETTLING_TIME_MS      (200u)
+
 /* BT settling time after power on */
 #define BT_POWER_ON_SETTLING_TIME_MS      (500u)
 
@@ -234,6 +237,14 @@ int bt_h4_vnd_setup(const struct device *dev)
 			err, bt_reg_on.port->name, bt_reg_on.pin);
 		return err;
 	}
+	err = gpio_pin_set_dt(&bt_reg_on, 0);
+	if (err) {
+		return err;
+	}
+
+	/* BT settling time for power off */
+	(void)k_msleep(BT_POWER_OFF_SETTLING_TIME_MS);
+
 	err = gpio_pin_set_dt(&bt_reg_on, 1);
 	if (err) {
 		return err;
