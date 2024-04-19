@@ -223,6 +223,7 @@ static void rx_thread(void *p1, void *p2, void *p3)
 	while (1) {
 		LOG_DBG("rx.buf %p", rx.buf);
 
+#if 0
 		/* We can only do the allocation if we know the initial
 		 * header, since Command Complete/Status events must use the
 		 * original command buffer (if available).
@@ -238,15 +239,22 @@ static void rx_thread(void *p1, void *p2, void *p3)
 				copy_hdr(rx.buf);
 			}
 		}
+#endif
 
 		/* Let the ISR continue receiving new packets */
+		LOG_WRN("Enable");			
 		uart_irq_rx_enable(h4_dev);
 
+
 		buf = net_buf_get(&rx.fifo, K_FOREVER);
+
+#ifndef CONFIG_BT_HCI_RAW_H4_ENABLE
 		do {
 			uart_irq_rx_enable(h4_dev);
+#endif
 
-			LOG_DBG("Calling bt_recv(%p)", buf);
+			(void)k_msleep(1);
+
 			bt_recv(buf);
 
 			/* Give other threads a chance to run if the ISR
@@ -255,9 +263,12 @@ static void rx_thread(void *p1, void *p2, void *p3)
 			 */
 			k_yield();
 
+#ifndef CONFIG_BT_HCI_RAW_H4_ENABLE
 			uart_irq_rx_disable(h4_dev);
 			buf = net_buf_get(&rx.fifo, K_NO_WAIT);
 		} while (buf);
+#endif
+
 	}
 }
 
@@ -294,6 +305,9 @@ static inline void read_payload(void)
 
 			LOG_WRN("Failed to allocate, deferring to rx_thread");
 			uart_irq_rx_disable(h4_dev);
+
+			while(1);
+
 			return;
 		}
 
@@ -325,6 +339,11 @@ static inline void read_payload(void)
 	if (rx.remaining) {
 		return;
 	}
+
+#ifdef CONFIG_BT_HCI_RAW_H4_ENABLE
+	/* Disable RX until this packet in rx.fifo has been processed */
+	uart_irq_rx_disable(h4_dev);
+#endif
 
 	buf = rx.buf;
 	rx.buf = NULL;
