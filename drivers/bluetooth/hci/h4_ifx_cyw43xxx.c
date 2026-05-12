@@ -168,7 +168,7 @@ static int bt_firmware_download(const uint8_t *firmware_image, uint32_t size)
 	 */
 	while (remaining_length) {
 		size_t data_length = data[2]; /* data length from firmware image block */
-		uint16_t op_code = *(uint16_t *)data;
+		uint16_t op_code = ((uint16_t) data[1]) << 8 | data[0];
 
 		/* Allocate buffer for hci_write_ram/hci_launch_ram command. */
 		buf = bt_hci_cmd_alloc(K_FOREVER);
